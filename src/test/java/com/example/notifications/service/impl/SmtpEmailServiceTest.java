@@ -47,7 +47,7 @@ class SmtpEmailServiceTest {
         // Then
         verify(mailSender).createMimeMessage();
         verify(mailSender).send(mimeMessage);
-        // Note: We cannot easily verify the helper method calls directly without more complex mocking
+
     }
 
     @Test
@@ -63,15 +63,10 @@ class SmtpEmailServiceTest {
 
     @Test
     void sendEmail_MessagingException_ThrowsRuntimeException() {
-        // Given - Make the mail sender return a real message
+        // Given
         MimeMessage mimeMessage = mock(MimeMessage.class);
         when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
 
-        // Mock the send method to throw a RuntimeException that simulates
-        // what happens when a MessagingException occurs in the service
-        // Since your service catches MessagingException and wraps it,
-        // we need to simulate the condition that leads to that catch block.
-        // The easiest way is to make the send method throw a RuntimeException
         doThrow(new RuntimeException("SMTP email sending failed", new MessagingException("Underlying mail issue")))
                 .when(mailSender).send(mimeMessage);
 
