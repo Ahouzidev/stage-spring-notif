@@ -1,0 +1,42 @@
+package com.example.notifications.service.impl;
+
+import com.example.notifications.dto.EmailRequest;
+import com.example.notifications.service.EmailService;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+
+@Service("smtpEmailService")
+@RequiredArgsConstructor
+@Slf4j
+public class SmtpEmailService implements EmailService {
+
+    private final JavaMailSender mailSender;
+
+    @Override
+    public void sendEmail(EmailRequest request) {
+
+        if (request == null) {
+            throw new IllegalArgumentException("Email request must not be null");
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(request.getTo());
+            helper.setSubject(request.getSubject());
+            helper.setText(request.getContent(), true);
+
+            mailSender.send(message);
+            log.info("SMTP email sent successfully to {}", request.getTo());
+        } catch (MessagingException e) {
+            log.error("Failed to send SMTP email to {}", request.getTo(), e);
+            throw new RuntimeException("SMTP email sending failed", e);
+        }
+    }
+}

@@ -1,0 +1,55 @@
+server:
+  port: 8081
+
+keycloak:
+  base-url: ${KEYCLOAK_BASE_URL}
+  realm: ${KEYCLOAK_REALM}
+
+firebase:
+  credentials:
+    path: src/main/resources/firebase-service-account.json
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${KEYCLOAK_CLIENT_ID}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/swagger-ui/oauth2-redirect.html"
+            scope: openid, profile, email
+        provider:
+          keycloak:
+            issuer-uri: ${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+sendgrid:
+  api-key: ${SENDGRID_API_KEY}
+
+onesignal:
+  app-id: ${ONESIGNAL_APP_ID}
+  api-key: ${ONESIGNAL_API_KEY}
+
+springdoc:
+  swagger-ui:
+    oauth:
+      client-id: ${KEYCLOAK_CLIENT_ID}
+      use-pkce-with-authorization-code-grant: true
