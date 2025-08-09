@@ -1,16 +1,18 @@
 package com.example.notifications.service.impl;
 
 import com.example.notifications.dto.EmailRequest;
-import jakarta.mail.MessagingException;
+
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 
+import java.util.Arrays;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -24,34 +26,51 @@ class SmtpEmailServiceTest {
     @InjectMocks
     private SmtpEmailService smtpEmailService;
 
-    private EmailRequest emailRequest;
+    private EmailRequest emailRequestSingle;
+    private EmailRequest emailRequestMultiple;
 
     @BeforeEach
     void setUp() {
-        emailRequest = EmailRequest.builder()
-                .to("test@example.com")
+        emailRequestSingle = EmailRequest.builder()
+                .to(Collections.singletonList("test@example.com"))
                 .subject("Test Subject")
                 .content("Test Content")
+                .build();
+
+        emailRequestMultiple = EmailRequest.builder()
+                .to(Arrays.asList("user1@example.com", "user2@example.com"))
+                .subject("Group Subject")
+                .content("Group Content")
                 .build();
     }
 
     @Test
-    void sendEmail_Success() {
-        // Given
+    void sendEmail_Success_SingleRecipient()  {
         MimeMessage mimeMessage = mock(MimeMessage.class);
         when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
 
-        // When
-        smtpEmailService.sendEmail(emailRequest);
+        smtpEmailService.sendEmail(emailRequestSingle);
 
-        // Then
+        verify(mailSender).createMimeMessage();
+        verify(mailSender).send(mimeMessage);
+
+        // Optionally verify MimeMessage was configured (using ArgumentCaptor)
+        // This requires you to spy or mock MimeMessageHelper in the service (more complex)
+    }
+
+    @Test
+    void sendEmail_Success_MultipleRecipients()  {
+        MimeMessage mimeMessage = mock(MimeMessage.class);
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+
+        smtpEmailService.sendEmail(emailRequestMultiple);
+
         verify(mailSender).createMimeMessage();
         verify(mailSender).send(mimeMessage);
     }
 
     @Test
     void sendEmail_NullRequest_ThrowsException() {
-        // When & Then
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> smtpEmailService.sendEmail(null)
@@ -61,24 +80,23 @@ class SmtpEmailServiceTest {
     }
 
     @Test
-    void sendEmail_MessagingException_ThrowsRuntimeException() {
-        // Given
+    void sendEmail_MessagingException_ThrowsRuntimeException()  {
         MimeMessage mimeMessage = mock(MimeMessage.class);
         when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
 
-        doThrow(new RuntimeException("SMTP email sending failed", new MessagingException("Underlying mail issue")))
-                .when(mailSender).send(mimeMessage);
+        // Throw MailSendException instead of MessagingException
+        doThrow(new MailSendException("Underlying mail issue")).when(mailSender).send(mimeMessage);
 
-        // When & Then
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
-                () -> smtpEmailService.sendEmail(emailRequest)
+                () -> smtpEmailService.sendEmail(emailRequestSingle)
         );
 
         assertEquals("SMTP email sending failed", exception.getMessage());
-        assertInstanceOf(MessagingException.class, exception.getCause());
+        assertInstanceOf(MailSendException.class, exception.getCause());
 
         verify(mailSender).createMimeMessage();
         verify(mailSender).send(mimeMessage);
     }
+
 }
