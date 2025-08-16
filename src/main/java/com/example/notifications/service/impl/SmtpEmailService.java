@@ -2,7 +2,6 @@ package com.example.notifications.service.impl;
 
 import com.example.notifications.dto.EmailRequest;
 import com.example.notifications.service.EmailService;
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,13 +27,13 @@ public class SmtpEmailService implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setTo(request.getTo());
+            helper.setTo(request.getTo().toArray(new String[0]));
             helper.setSubject(request.getSubject());
             helper.setText(request.getContent(), true);
 
             mailSender.send(message);
             log.info("SMTP email sent successfully to {}", request.getTo());
-        } catch (MessagingException e) {
+        } catch (Exception  e) {
             log.error("Failed to send SMTP email to {}", request.getTo(), e);
             throw new RuntimeException("SMTP email sending failed", e);
         }

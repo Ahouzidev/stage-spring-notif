@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.sendgrid.helpers.mail.objects.Personalization;
+
 
 import java.io.IOException;
 
@@ -27,11 +29,22 @@ public class SendGridEmailService implements EmailService {
     @Override
     public void sendEmail(EmailRequest request) {
         Email from = new Email(fromEmail);
-        Email to = new Email(request.getTo());
         Content content = new Content("text/html", request.getContent());
-        Mail mail = new Mail(from, request.getSubject(), to, content);
 
-        SendGrid sendGrid = new SendGrid(sendGridApiKey);
+        Mail mail = new Mail();
+        mail.setFrom(from);
+        mail.setSubject(request.getSubject());
+        mail.addContent(content);
+
+        Personalization personalization = new Personalization();
+
+        for (String recipient : request.getTo()) {
+            personalization.addTo(new Email(recipient));
+        }
+
+        mail.addPersonalization(personalization);
+
+        SendGrid sg = new SendGrid(sendGridApiKey);
         Request sgRequest = new Request();
 
         try {
@@ -39,7 +52,7 @@ public class SendGridEmailService implements EmailService {
             sgRequest.setEndpoint("mail/send");
             sgRequest.setBody(mail.build());
 
-            Response response = sendGrid.api(sgRequest);
+            Response response = sg.api(sgRequest);
 
             if (response.getStatusCode() >= 400) {
                 log.error("SendGrid email failed. Status: {}, Body: {}", response.getStatusCode(), response.getBody());

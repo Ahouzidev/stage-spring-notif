@@ -45,6 +45,20 @@ public class FirebasePushNotificationService implements PushNotificationService 
     }
 
     @Override
+    public void unsubscribeFromTopic(SubscribeRequest request) {
+        try {
+            TopicManagementResponse response = FirebaseMessaging.getInstance()
+                    .unsubscribeFromTopic(List.of(request.getToken()), request.getTopic());
+            log.info("Unsubscribed token from topic '{}'. Success count: {}",
+                    request.getTopic(), response.getSuccessCount());
+        } catch (FirebaseMessagingException e) {
+            log.error("Error unsubscribing from topic", e);
+            throw new RuntimeException("Failed to unsubscribe from topic", e);
+        }
+    }
+
+
+    @Override
     public void sendPushNotificationToTopic(TopicNotificationRequest request) {
         Message message = Message.builder()
                 .setTopic(request.getTopic())

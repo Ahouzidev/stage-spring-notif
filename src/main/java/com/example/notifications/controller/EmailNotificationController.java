@@ -2,6 +2,7 @@ package com.example.notifications.controller;
 
 import com.example.notifications.dto.EmailRequest;
 import com.example.notifications.service.EmailService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,13 +23,13 @@ public class EmailNotificationController {
     }
 
     @PostMapping("/smtp")
-    public ResponseEntity<String> sendEmailSmtp(@RequestBody EmailRequest request) {
+    public ResponseEntity<String> sendEmailSmtp(@Valid @RequestBody EmailRequest request) {
         smtpEmailService.sendEmail(request);
         return ResponseEntity.ok("SMTP Email Sent Successfully");
     }
 
     @PostMapping("/sendgrid")
-    public ResponseEntity<String> sendEmailSendGrid(@RequestBody EmailRequest request) {
+    public ResponseEntity<String> sendEmailSendGrid(@Valid @RequestBody EmailRequest request) {
         sendGridEmailService.sendEmail(request);
         return ResponseEntity.ok("SendGrid Email Sent Successfully");
     }

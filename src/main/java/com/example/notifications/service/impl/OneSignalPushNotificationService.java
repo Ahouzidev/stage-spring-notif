@@ -51,6 +51,19 @@ public class OneSignalPushNotificationService implements PushNotificationService
     }
 
     @Override
+    public void unsubscribeFromTopic(SubscribeRequest request) {
+        String url = "https://onesignal.com/api/v1/players/" + request.getToken();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("app_id", appId);
+
+        body.put("tags", Map.of("topic", ""));
+
+        sendPutRequest(url, body);
+    }
+
+
+    @Override
     public void sendPushNotificationToTopic(TopicNotificationRequest request) {
         String url = "https://onesignal.com/api/v1/notifications";
 
