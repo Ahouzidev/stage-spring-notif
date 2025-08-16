@@ -9,7 +9,7 @@ public interface PushNotificationService {
 
     void subscribeToTopic(SubscribeRequest request);
 
-    void unsubscribeFromTopic(SubscribeRequest request); // NEW
+    void unsubscribeFromTopic(SubscribeRequest request);
 
     void sendPushNotificationToTopic(TopicNotificationRequest request);
 }

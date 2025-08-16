@@ -38,7 +38,7 @@ class EmailNotificationControllerTest {
         MockitoAnnotations.openMocks(this);
         EmailNotificationController emailNotificationController = new EmailNotificationController(smtpEmailService, sendGridEmailService);
         mockMvc = MockMvcBuilders.standaloneSetup(emailNotificationController)
-                .setValidator(new LocalValidatorFactoryBean())  // Enable validation
+                .setValidator(new LocalValidatorFactoryBean())
                 .build();
     }
 
