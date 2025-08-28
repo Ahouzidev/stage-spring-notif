@@ -67,10 +67,6 @@ class SmtpEmailServiceTest {
 
         verify(mailSender).createMimeMessage();
         verify(mailSender).send(mimeMessage);
-<<<<<<< HEAD
-
-=======
->>>>>>> master
     }
 
     @Test
@@ -84,22 +80,12 @@ class SmtpEmailServiceTest {
     }
 
     @Test
-<<<<<<< HEAD
-    void sendEmail_MessagingException_ThrowsRuntimeException() {
-        // Given
-        MimeMessage mimeMessage = mock(MimeMessage.class);
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-
-        doThrow(new RuntimeException("SMTP email sending failed", new MessagingException("Underlying mail issue")))
-                .when(mailSender).send(mimeMessage);
-=======
     void sendEmail_MessagingException_ThrowsRuntimeException()  {
         MimeMessage mimeMessage = mock(MimeMessage.class);
         when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
 
         // Throw MailSendException instead of MessagingException
         doThrow(new MailSendException("Underlying mail issue")).when(mailSender).send(mimeMessage);
->>>>>>> master
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,

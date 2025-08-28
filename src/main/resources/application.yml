@@ -10,6 +10,15 @@ firebase:
     path: src/main/resources/firebase-service-account.json
 
 spring:
+
+  kafka:
+    bootstrap-servers: localhost:9094
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
   security:
     oauth2:
       client:
@@ -53,3 +62,5 @@ springdoc:
     oauth:
       client-id: ${KEYCLOAK_CLIENT_ID}
       use-pkce-with-authorization-code-grant: true
+
+
