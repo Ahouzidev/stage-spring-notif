@@ -12,12 +12,12 @@ firebase:
 spring:
 
   kafka:
-    bootstrap-servers: localhost:9094
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     consumer:
-      group-id: notification-service
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      group-id: ${KAFKA_CONSUMER_GROUP_ID}
+      auto-offset-reset: ${KAFKA_CONSUMER_AUTO_OFFSET_RESET}
+      key-deserializer: ${KAFKA_CONSUMER_KEY_DESERIALIZER}
+      value-deserializer: ${KAFKA_CONSUMER_VALUE_DESERIALIZER}
 
   security:
     oauth2:
