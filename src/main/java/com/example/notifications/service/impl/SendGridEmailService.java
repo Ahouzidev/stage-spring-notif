@@ -1,19 +1,22 @@
 package com.example.notifications.service.impl;
 
 import com.example.notifications.dto.EmailRequest;
+import com.example.notifications.entity.Notification;
+import com.example.notifications.repository.NotificationRepository;
 import com.example.notifications.service.EmailService;
 import com.sendgrid.*;
 import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Content;
 import com.sendgrid.helpers.mail.objects.Email;
+import com.sendgrid.helpers.mail.objects.Personalization;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import com.sendgrid.helpers.mail.objects.Personalization;
-
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+
 
 @Service("sendGridEmailService")
 @RequiredArgsConstructor
@@ -26,6 +29,8 @@ public class SendGridEmailService implements EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    private final NotificationRepository notificationRepository;
+
     @Override
     public void sendEmail(EmailRequest request) {
         Email from = new Email(fromEmail);
@@ -37,11 +42,9 @@ public class SendGridEmailService implements EmailService {
         mail.addContent(content);
 
         Personalization personalization = new Personalization();
-
         for (String recipient : request.getTo()) {
             personalization.addTo(new Email(recipient));
         }
-
         mail.addPersonalization(personalization);
 
         SendGrid sg = new SendGrid(sendGridApiKey);
@@ -60,6 +63,17 @@ public class SendGridEmailService implements EmailService {
             }
 
             log.info("SendGrid email sent successfully to {}", request.getTo());
+
+            // Save the email notification to the database
+            Notification notif = new Notification();
+            notif.setType("EMAIL");
+            notif.setProvider("SENDGRID");
+            notif.setMode("SEND"); // Can use "SEND" for emails
+            notif.setTitle(request.getSubject());
+            notif.setBody(request.getContent());
+            notif.setRecipients(String.join(",", request.getTo()));
+            notif.setTimestamp(LocalDateTime.now());
+            notificationRepository.save(notif);
 
         } catch (IOException e) {
             log.error("SendGrid email sending error to {}", request.getTo(), e);

@@ -1,6 +1,8 @@
 package com.example.notifications.service.impl;
 
 import com.example.notifications.dto.EmailRequest;
+import com.example.notifications.entity.Notification;
+import com.example.notifications.repository.NotificationRepository;
 import com.example.notifications.service.EmailService;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -9,12 +11,15 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @Service("smtpEmailService")
 @RequiredArgsConstructor
 @Slf4j
 public class SmtpEmailService implements EmailService {
 
     private final JavaMailSender mailSender;
+    private final NotificationRepository notificationRepository;
 
     @Override
     public void sendEmail(EmailRequest request) {
@@ -33,7 +38,19 @@ public class SmtpEmailService implements EmailService {
 
             mailSender.send(message);
             log.info("SMTP email sent successfully to {}", request.getTo());
-        } catch (Exception  e) {
+
+            // Save email notification to database
+            Notification notif = new Notification();
+            notif.setType("EMAIL");
+            notif.setProvider("SMTP");
+            notif.setMode("SEND"); // Can use "SEND" for emails
+            notif.setTitle(request.getSubject());
+            notif.setBody(request.getContent());
+            notif.setRecipients(String.join(",", request.getTo()));
+            notif.setTimestamp(LocalDateTime.now());
+            notificationRepository.save(notif);
+
+        } catch (Exception e) {
             log.error("Failed to send SMTP email to {}", request.getTo(), e);
             throw new RuntimeException("SMTP email sending failed", e);
         }
