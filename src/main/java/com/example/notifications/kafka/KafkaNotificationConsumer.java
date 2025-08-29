@@ -1,95 +1,89 @@
 package com.example.notifications.kafka;
 
+import com.example.notifications.config.NotificationConfig;
 import com.example.notifications.dto.*;
 import com.example.notifications.service.EmailService;
 import com.example.notifications.service.PushNotificationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Slf4j
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class KafkaNotificationConsumer {
 
-    private final PushNotificationService fcmPushNotificationService;
-    private final PushNotificationService oneSignalPushNotificationService;
-    private final EmailService smtpEmailService;
-    private final EmailService sendGridEmailService;
+    private final NotificationConfig notificationConfig;
+    private final EmailService defaultEmailService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public KafkaNotificationConsumer(
-            @Qualifier("fcmPushNotificationService") PushNotificationService fcmPushNotificationService,
-            @Qualifier("onesignalPushNotificationService") PushNotificationService oneSignalPushNotificationService,
-            @Qualifier("smtpEmailService") EmailService smtpEmailService,
-            @Qualifier("sendGridEmailService") EmailService sendGridEmailService
-    ) {
-        this.fcmPushNotificationService = fcmPushNotificationService;
-        this.oneSignalPushNotificationService = oneSignalPushNotificationService;
-        this.smtpEmailService = smtpEmailService;
-        this.sendGridEmailService = sendGridEmailService;
-    }
-
-    @KafkaListener(topics = "push-notifications", groupId = "notification-service")
-    public void consumePush(String message) {
+    @KafkaListener(topics = "notifications", groupId = "notification-service")
+    public void consumeNotification(String message) {
         try {
             KafkaNotificationMessage notif = objectMapper.readValue(message, KafkaNotificationMessage.class);
 
-            // Decide which push service to use
-            PushNotificationService service;
-            if ("FCM".equalsIgnoreCase(notif.getProvider())) {
-                service = fcmPushNotificationService;
-            } else if ("ONESIGNAL".equalsIgnoreCase(notif.getProvider())) {
-                service = oneSignalPushNotificationService;
-            } else {
-                log.warn("Unknown push provider: {}", notif.getProvider());
-                return;
-            }
-
-            // Handle push mode
-            switch (notif.getMode().toUpperCase()) {
-                case "TOKEN" -> service.sendPushNotification(
-                        new PushNotificationRequest(notif.getToken(), notif.getTitle(), notif.getBody())
-                );
-                case "TOPIC" -> service.sendPushNotificationToTopic(
-                        new TopicNotificationRequest(notif.getTopic(), notif.getTitle(), notif.getBody())
-                );
-                case "SUBSCRIBE" -> service.subscribeToTopic(
-                        new SubscribeRequest(notif.getToken(), notif.getTopic())
-                );
-                case "UNSUBSCRIBE" -> service.unsubscribeFromTopic(
-                        new SubscribeRequest(notif.getToken(), notif.getTopic())
-                );
-                default -> log.warn("Unknown push mode: {}", notif.getMode());
+            switch (notif.getType().toUpperCase()) {
+                case "PUSH" -> sendPushNotification(notif);
+                case "EMAIL" -> sendEmailNotification(notif);
+                default -> log.warn("Unknown notification type: {}", notif.getType());
             }
 
         } catch (Exception e) {
-            log.error("Error processing push message: {}", message, e);
+            log.error("Error processing Kafka message: {}", message, e);
         }
     }
 
-    @KafkaListener(topics = "email-notifications", groupId = "notification-service")
-    public void consumeEmail(String message) {
-        try {
-            KafkaNotificationMessage notif = objectMapper.readValue(message, KafkaNotificationMessage.class);
+    private void sendPushNotification(KafkaNotificationMessage notif) {
+        PushNotificationService pushService = notificationConfig.defaultPushService();
+        String mode = notificationConfig.getPushMode();
 
-            EmailRequest emailRequest = new EmailRequest(
-                    notif.getTo(),
-                    notif.getSubject(),
-                    notif.getContent()
-            );
-
-            if ("SMTP".equalsIgnoreCase(notif.getProvider())) {
-                smtpEmailService.sendEmail(emailRequest);
-            } else if ("SENDGRID".equalsIgnoreCase(notif.getProvider())) {
-                sendGridEmailService.sendEmail(emailRequest);
-            } else {
-                log.warn("Unknown email provider: {}", notif.getProvider());
-            }
-
-        } catch (Exception e) {
-            log.error("Error processing email message: {}", message, e);
+        if ("TOKEN".equalsIgnoreCase(mode)) {
+            sendToToken(pushService, notif);
+        } else if ("TOPIC".equalsIgnoreCase(mode)) {
+            sendViaTemporaryTopic(pushService, notif);
         }
+    }
+
+    private void sendToToken(PushNotificationService pushService, KafkaNotificationMessage notif) {
+        PushNotificationRequest request = new PushNotificationRequest();
+        request.setToken(notif.getToken());
+        request.setTitle(notif.getTitle());
+        request.setBody(notif.getBody());
+        pushService.sendPushNotification(request);
+    }
+
+    private void sendViaTemporaryTopic(PushNotificationService pushService, KafkaNotificationMessage notif) {
+        String topic = "tmp_" + UUID.randomUUID();
+
+        SubscribeRequest subscribeRequest = new SubscribeRequest();
+        subscribeRequest.setToken(notif.getToken());
+        subscribeRequest.setTopic(topic);
+
+        try {
+            pushService.subscribeToTopic(subscribeRequest);
+
+            TopicNotificationRequest topicRequest = new TopicNotificationRequest();
+            topicRequest.setTopic(topic);
+            topicRequest.setTitle(notif.getTitle());
+            topicRequest.setBody(notif.getBody());
+            pushService.sendPushNotificationToTopic(topicRequest);
+
+        } finally {
+            pushService.unsubscribeFromTopic(subscribeRequest);
+        }
+    }
+
+    private void sendEmailNotification(KafkaNotificationMessage notif) {
+        defaultEmailService.sendEmail(new EmailRequest(
+                notif.getTo(),
+                notif.getSubject(),
+                notif.getContent()
+        ));
     }
 }

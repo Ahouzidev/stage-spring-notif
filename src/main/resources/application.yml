@@ -11,6 +11,7 @@ firebase:
 
 spring:
 
+
   datasource:
     url: jdbc:postgresql://localhost:5432/notif
     username: admin
@@ -81,3 +82,10 @@ springdoc:
     oauth:
       client-id: ${KEYCLOAK_CLIENT_ID}
       use-pkce-with-authorization-code-grant: true
+
+notification:
+  email:
+    default: sendGridEmailService   # smtpEmailService or sendGridEmailService
+  push:
+    default: onesignalPushNotificationService  # fcmPushNotificationService or onesignalPushNotificationService
+    mode: TOPIC  #  TOPIC  or TOKEN
