@@ -23,10 +23,11 @@ public class SmtpEmailService implements EmailService {
 
     @Override
     public void sendEmail(EmailRequest request) {
-
         if (request == null) {
             throw new IllegalArgumentException("Email request must not be null");
         }
+
+        String status = "SUCCESS";
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -37,22 +38,28 @@ public class SmtpEmailService implements EmailService {
             helper.setText(request.getContent(), true);
 
             mailSender.send(message);
-            log.info("SMTP email sent successfully to {}", request.getTo());
+            log.info("✅ SMTP email sent successfully to {}", request.getTo());
 
-            // Save email notification to database
+        } catch (Exception e) {
+            log.error("❌ Failed to send SMTP email to {}", request.getTo(), e);
+            status = "FAILED";
+        } finally {
+            // Save notification to database
             Notification notif = new Notification();
             notif.setType("EMAIL");
             notif.setProvider("SMTP");
-            notif.setMode("SEND"); // Can use "SEND" for emails
-            notif.setTitle(request.getSubject());
+            notif.setMode("SEND");
+            notif.setTitle(null);                  // Push title is null for emails
+            notif.setSubject(request.getSubject());
             notif.setBody(request.getContent());
             notif.setRecipients(String.join(",", request.getTo()));
             notif.setTimestamp(LocalDateTime.now());
+            notif.setStatus(status);
             notificationRepository.save(notif);
+        }
 
-        } catch (Exception e) {
-            log.error("Failed to send SMTP email to {}", request.getTo(), e);
-            throw new RuntimeException("SMTP email sending failed", e);
+        if ("FAILED".equals(status)) {
+            throw new RuntimeException("SMTP email sending failed");
         }
     }
 }

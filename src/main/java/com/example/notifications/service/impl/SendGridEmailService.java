@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.time.LocalDateTime;
 
-
 @Service("sendGridEmailService")
 @RequiredArgsConstructor
 @Slf4j
@@ -50,34 +49,41 @@ public class SendGridEmailService implements EmailService {
         SendGrid sg = new SendGrid(sendGridApiKey);
         Request sgRequest = new Request();
 
+        String status = "SUCCESS";
+
         try {
             sgRequest.setMethod(Method.POST);
             sgRequest.setEndpoint("mail/send");
             sgRequest.setBody(mail.build());
 
             Response response = sg.api(sgRequest);
-
             if (response.getStatusCode() >= 400) {
                 log.error("SendGrid email failed. Status: {}, Body: {}", response.getStatusCode(), response.getBody());
-                throw new RuntimeException("SendGrid email sending failed");
+                status = "FAILED";
+            } else {
+                log.info("✅ SendGrid email sent successfully to {}", request.getTo());
             }
 
-            log.info("SendGrid email sent successfully to {}", request.getTo());
-
-            // Save the email notification to the database
+        } catch (IOException e) {
+            log.error("❌ SendGrid email sending error to {}", request.getTo(), e);
+            status = "FAILED";
+        } finally {
+            // Save notification to database
             Notification notif = new Notification();
             notif.setType("EMAIL");
             notif.setProvider("SENDGRID");
-            notif.setMode("SEND"); // Can use "SEND" for emails
-            notif.setTitle(request.getSubject());
+            notif.setMode("SEND");
+            notif.setTitle(null);               // Emails don't use title
+            notif.setSubject(request.getSubject());
             notif.setBody(request.getContent());
             notif.setRecipients(String.join(",", request.getTo()));
             notif.setTimestamp(LocalDateTime.now());
+            notif.setStatus(status);
             notificationRepository.save(notif);
+        }
 
-        } catch (IOException e) {
-            log.error("SendGrid email sending error to {}", request.getTo(), e);
-            throw new RuntimeException("SendGrid email sending failed", e);
+        if ("FAILED".equals(status)) {
+            throw new RuntimeException("SendGrid email sending failed");
         }
     }
 }
