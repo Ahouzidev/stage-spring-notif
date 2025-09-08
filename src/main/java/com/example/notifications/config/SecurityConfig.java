@@ -29,7 +29,8 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/ping",
                                 "/emailNotifications/**",
-                                "/pushNotifications/**"
+                                "/pushNotifications/**",
+                                "/smsNotifications/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

@@ -2,6 +2,7 @@ package com.example.notifications.config;
 
 import com.example.notifications.service.EmailService;
 import com.example.notifications.service.PushNotificationService;
+import com.example.notifications.service.SmsService;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -22,6 +23,10 @@ public class NotificationConfig {
 
     @Value("${notification.push.mode}")  // "TOKEN" or "TOPIC"
     private String pushMode;
+
+    @Value("${notification.sms.default}")
+    private String defaultSmsProvider;
+
 
     private final ApplicationContext applicationContext;
 
@@ -52,6 +57,20 @@ public class NotificationConfig {
             throw new IllegalArgumentException(
                     "No PushNotificationService bean found for name: " + defaultPushProvider +
                             ". Available beans: " + pushServices.keySet()
+            );
+        }
+        return service;
+    }
+
+    // Default SMSService
+    @Bean
+    public SmsService defaultSmsService() {
+        Map<String, SmsService> smsServices = applicationContext.getBeansOfType(SmsService.class);
+        SmsService service = smsServices.get(defaultSmsProvider);
+        if (service == null) {
+            throw new IllegalArgumentException(
+                    "No SmsService bean found for name: " + defaultSmsProvider +
+                            ". Available beans: " + smsServices.keySet()
             );
         }
         return service;
